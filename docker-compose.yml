@@ -1,0 +1,17 @@
+services:
+  
+  pgadmin:
+    container_name: livraria-pgadmin
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=dba@mail.com  # Qualquer e-mail fictício
+      - PGADMIN_DEFAULT_PASSWORD=dba
+    ports:
+      - "5050:80"  # Acessar PGAdmin via http://localhost:5050
+    networks:
+      - livraria_net
+    restart: always
+
+networks:
+  livraria_net:
+    driver: bridge
