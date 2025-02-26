@@ -1,0 +1,717 @@
+openapi: 3.0.0
+info:
+  title: Virtual Bookstore API
+  version: 1.0.0
+  description: API for managing a virtual bookstore
+servers:
+  - url: http://localhost:3010
+    description: Development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Enter your bearer token in the format **Bearer <token>**
+
+  schemas:
+    SignUpRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+        password:
+          type: string
+          format: password
+          description: User's password
+        name:
+          type: string
+          description: User's full name
+
+    SignInRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+        password:
+          type: string
+          format: password
+          description: User's password
+
+    AuthResponse:
+      type: object
+      properties:
+        session:
+          type: object
+          properties:
+            access_token:
+              type: string
+            token_type:
+              type: string
+            expires_in:
+              type: integer
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            email:
+              type: string
+              format: email
+
+    Book:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the book
+        title:
+          type: string
+          description: Book title
+        author:
+          type: string
+          description: Book author
+        isbn:
+          type: string
+          description: Book ISBN code
+        category_id:
+          type: string
+          format: uuid
+          description: Category identifier for the book
+        description:
+          type: string
+          description: Book description
+        published_date:
+          type: string
+          format: date
+          description: Publication date
+        image_url:
+          type: string
+          description: Cover image URL
+        quantity:
+          type: integer
+          description: Available quantity in stock
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation date
+    
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the category
+        name:
+          type: string
+          description: Category name
+        description:
+          type: string
+          description: Category description
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation date
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user
+        name:
+          type: string
+          description: User name
+        email:
+          type: string
+          description: User email
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation date
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the review
+        book_id:
+          type: string
+          format: uuid
+          description: Book identifier
+        user_id:
+          type: string
+          format: uuid
+          description: User identifier who made the review
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Rating (1 to 5)
+        comment:
+          type: string
+          description: Review comment
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation date
+
+    Loan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the loan
+        book_id:
+          type: string
+          format: uuid
+          description: Book identifier
+        user_id:
+          type: string
+          format: uuid
+          description: User identifier who borrowed the book
+        expected_return_date:
+          type: string
+          format: date
+          description: Expected return date
+        returned_at:
+          type: string
+          format: date
+          description: Actual return date
+        status:
+          type: string
+          enum: [active, returned, overdue]
+          description: Loan status (active, returned, overdue)
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation date
+
+    BookFavorite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the favorite
+        book_id:
+          type: string
+          format: uuid
+          description: Book identifier
+        user_id:
+          type: string
+          format: uuid
+          description: User identifier who favorited
+        created_at:
+          type: string
+          format: date-time
+          description: Record creation date
+
+tags:
+  - name: Authentication
+    description: User authentication operations
+  - name: Book Favorites
+    description: Operations related to favorite books
+  - name: Books
+    description: Operations related to books catalog
+  - name: Categories
+    description: Operations related to book categories
+  - name: Loans
+    description: Operations related to book loans
+  - name: Reviews
+    description: Operations related to book reviews
+  - name: Users
+    description: Operations related to system users
+
+paths:
+  /auth/signup:
+    post:
+      tags: [Authentication]
+      summary: Register new user with authentication
+      description: Creates a new user account with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUpRequest'
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request data
+        '500':
+          description: Server error
+
+  /auth/signin:
+    post:
+      tags: [Authentication]
+      summary: Sign in user
+      description: Authenticates a user with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignInRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Authentication failed
+        '500':
+          description: Server error
+
+  /book-favorites:
+    get:
+      tags: [Book Favorites]
+      summary: List all favorite books
+      description: Returns a list of all users' favorite books
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of favorites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookFavorite'
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Book Favorites]
+      summary: Add book to favorites
+      description: Adds a book to user's favorite list
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookFavorite'
+      responses:
+        '201':
+          description: Book successfully added to favorites
+        '401':
+          description: Unauthorized
+
+  /books:
+    get:
+      tags: [Books]
+      summary: List all books
+      description: Returns a list of all registered books
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Books]
+      summary: Register new book
+      description: Adds a new book to the catalog
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+      responses:
+        '201':
+          description: Book successfully registered
+        '401':
+          description: Unauthorized
+
+  /books/{id}:
+    get:
+      tags: [Books]
+      summary: Get book by ID
+      description: Returns details of a specific book
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Book ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Book details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Book not found
+    put:
+      tags: [Books]
+      summary: Update book
+      description: Updates an existing book
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Book ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+      responses:
+        '200':
+          description: Book successfully updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Book not found
+    delete:
+      tags: [Books]
+      summary: Delete book
+      description: Deletes an existing book
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Book ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Book successfully deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Book not found
+
+  /categories:
+    get:
+      tags: [Categories]
+      summary: List all categories
+      description: Returns a list of all registered categories
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Categories]
+      summary: Register new category
+      description: Adds a new category to the system
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+      responses:
+        '201':
+          description: Category successfully registered
+        '401':
+          description: Unauthorized
+
+  /categories/{id}:
+    put:
+      tags: [Categories]
+      summary: Update category
+      description: Updates an existing category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Category ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Category'
+      responses:
+        '200':
+          description: Category successfully updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Category not found
+    delete:
+      tags: [Categories]
+      summary: Delete category
+      description: Deletes an existing category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Category ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Category successfully deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Category not found
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List all users
+      description: Returns a list of all registered users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Users]
+      summary: Register new user
+      description: Adds a new user to the system
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '201':
+          description: User successfully registered
+        '401':
+          description: Unauthorized
+
+  /reviews:
+    get:
+      tags: [Reviews]
+      summary: List all reviews
+      description: Returns a list of all registered reviews
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Review'
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Reviews]
+      summary: Register new review
+      description: Adds a new review to the system
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+      responses:
+        '201':
+          description: Review successfully registered
+        '401':
+          description: Unauthorized
+
+  /reviews/{id}:
+    put:
+      tags: [Reviews]
+      summary: Update review
+      description: Updates an existing review
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Review ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+      responses:
+        '200':
+          description: Review successfully updated
+        '401':
+          description: Unauthorized
+        '404':
+          description: Review not found
+    delete:
+      tags: [Reviews]
+      summary: Delete review
+      description: Deletes an existing review
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Review ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review successfully deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Review not found
+
+  /loans:
+    get:
+      tags: [Loans]
+      summary: List all loans
+      description: Returns a list of all registered loans
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of loans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Loan'
+        '401':
+          description: Unauthorized
+    post:
+      tags: [Loans]
+      summary: Register new loan
+      description: Adds a new loan to the system
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Loan'
+      responses:
+        '201':
+          description: Loan successfully registered
+        '401':
+          description: Unauthorized
+
+  /loans/{id}/return:
+    put:
+      tags: [Loans]
+      summary: Return a loan
+      description: Marks a loan as returned and sets the returned_at date
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Loan ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - returned_at
+              properties:
+                returned_at:
+                  type: string
+                  format: date
+                  description: Return date in YYYY-MM-DD format
+      responses:
+        '200':
+          description: Loan successfully returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '400':
+          description: Invalid date format or loan already returned
+        '401':
+          description: Unauthorized
+        '403':
+          description: Not authorized to return this loan
+        '404':
+          description: Loan not found
